@@ -25,8 +25,8 @@ _extract()
 }
 
 ################ if tomcat directory exist, backup tomcat directory ############
- if_exist()
- {
+if_exist()
+{
   local list_=($(ls /home/$TOMCAT_USER))
   for value in "${list_[@]}"
   do
@@ -46,7 +46,7 @@ _extract()
       echo "Go to installation"
     fi
   done
- }
+}
 
 ############################## tomcat user make ################################
 tomcat_user(){
