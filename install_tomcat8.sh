@@ -40,7 +40,6 @@ if_tomcat_dir()
 ############################## tomcat 엔진, 인스턴스 설치 ###########################
 tomcat_user()
 {
-  sudo chmod 755 /home/$TOMCAT_USER
   cd /home/$TOMCAT_USER
   sudo wget https://archive.apache.org/dist/tomcat/tomcat-8/v8.5.50/bin/${CATALINA_HOME_NAME}.tar.gz >& /dev/null
   echo -en "\e[1;36;40m    Downloading.....\e[0m"
@@ -74,6 +73,7 @@ else
 fi
 sleep 1
 
+sudo chmod 755 /home/${TOMCAT_USER} 
 # if tomcat directory exist, backup tomcat directory and create tomcat directory
 declare -a DIR
 DIR=( "${CATALINA_BASE_NAME}" "${SOURCE_DIR}" "${CATALINA_HOME_NAME}" )
