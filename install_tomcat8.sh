@@ -12,6 +12,7 @@ CATALINA_BASE_NAME="instance01" # instance home dir
 TOMCAT_USER="sigongweb"
 JDK="java-1.8.0-openjdk"
 date_=$(date "+%Y%m%d%H%M%S")
+server_xml_rul="https://raw.githubusercontent.com/sohwaje/auto_install_tomcat8/master/server.xml"
 ############################## compress indicator ##############################
 # usage: tar xvfz *.tar.gz | _extract
 _extract()
@@ -23,7 +24,7 @@ _extract()
   echo -e "\e[1;33;40m Successfully extracted \e[0m"
 }
 
-# if tomcat directory exist, backup tomcat directory
+################ if tomcat directory exist, backup tomcat directory ############
  if_exist()
  {
   local list_=($(ls /home/$TOMCAT_USER))
@@ -47,7 +48,7 @@ _extract()
   done
  }
 
-# tomcat user make
+############################## tomcat user make ################################
 tomcat_user(){
   cd /home/$TOMCAT_USER
   sudo wget https://archive.apache.org/dist/tomcat/tomcat-8/v8.5.50/bin/${CATALINA_HOME_NAME}.tar.gz >& /dev/null
@@ -111,7 +112,7 @@ fi
 echo -e "\e[1;32;40m Copy server.xml \e[0m"
 sudo rm -f "/home/$TOMCAT_USER/$CATALINA_BASE_NAME/conf/server.xml"
 sudo wget -P \
-  "/home/$TOMCAT_USER/$CATALINA_BASE_NAME/conf" https://raw.githubusercontent.com/sohwaje/auto_install_tomcat8/master/server.xml -q & >& /dev/null
+  "/home/$TOMCAT_USER/$CATALINA_BASE_NAME/conf" ${server_xml_rul} -q & >& /dev/null
 # tomcat database 설정
 if [[ ! -d /home/$TOMCAT_USER/${CATALINA_BASE_NAME}/conf/Catalina/localhost ]];then
   sudo mkdir -p "/home/$TOMCAT_USER/$SOURCE_DIR/$CATALINA_BASE_NAME"
