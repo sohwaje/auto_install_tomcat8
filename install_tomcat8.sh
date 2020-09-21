@@ -45,6 +45,7 @@ tomcat_user()
   echo -en "\e[1;36;40m    Downloading.....\e[0m"
   sudo tar xvfz ${CATALINA_HOME_NAME}.tar.gz 2>&1 | _extract
   sudo cp -ar ${CATALINA_HOME_NAME} ${CATALINA_BASE_NAME} && sudo rm -f ${CATALINA_HOME_NAME}.tar.gz
+  sudo mkdir -p /home/$TOMCAT_USER/${SOURCE_DIR}/${CATALINA_BASE_NAME}
 }
 
 ################################ JDK install ###################################
@@ -82,7 +83,7 @@ for i in "${DIR[@]}"
 do
   if_tomcat_dir $i
 done
-sudo mkdir /home/$TOMCAT_USER/$SOURCE_DIR
+
 ################################## Install tomcat8 #############################
 echo -e "\e[1;32;40m[2] Install tomcat8 \e[0m"
 if [[ -d /home/${TOMCAT_USER} ]];then
