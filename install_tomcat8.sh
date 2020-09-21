@@ -7,14 +7,15 @@
 # Tomcat configuration
 ## 변수 설정
 SOURCE_DIR="webapps"
-CATALINA_HOME_NAME="apache-tomcat-7.0.90" # engine home dir
-CATALINA_BASE_NAME="gneerbank" # instance home dir
+CATALINA_HOME_NAME="apache-tomcat-8.5.50" # engine home dir
+CATALINA_BASE_NAME="instance01" # instance home dir
 TOMCAT_USER="sigongweb"
-JDK=("java-1.8.0-openjdk" "java-1.8.0-openjdk-devel")
-
+JDK="java-1.8.0-openjdk"
+date_=$(date "+%Y%m%d%H%M%S")
 ############################## compress indicator ##############################
 # usage: tar xvfz *.tar.gz | _extract
-_extract(){
+_extract()
+{
   while read -r line; do
     x=$((x+1))
     echo -en "\e[1;36;40m [$x] extracted\r \e[0m"
@@ -22,78 +23,127 @@ _extract(){
   echo -e "\e[1;33;40m Successfully extracted \e[0m"
 }
 
-# JDK install
-if ! rpm -qa | grep ${JDK[0]} || rpm -qa | grep ${JDK[1]} > /dev/null;then
-  echo -e "\e[0;33;47m JDK was not found. Install JDK \e[0m"
-  sudo yum install -y ${JDK[@]}
-else
-  echo -e "\e[1;40m [JDK already installed] \e[0m"
-fi
+# if tomcat directory exist, backup tomcat directory
+ if_exist()
+ {
+  local list_=($(ls /home/$TOMCAT_USER))
+  for value in "${list_[@]}"
+  do
+    if [[ "$value" == "${CATALINA_HOME_NAME}" ]]
+    then
+      echo "${CATALINA_HOME_NAME} directory does already exist"
+      sudo mv /home/$TOMCAT_USER/${CATALINA_HOME_NAME} /home/$TOMCAT_USER/${CATALINA_HOME_NAME}-${date_}
+    elif [[ "$value" == "${CATALINA_BASE_NAME}" ]]
+    then
+      echo "${CATALINA_BASE_NAME} directory does already exist"
+      sudo mv /home/$TOMCAT_USER/${CATALINA_BASE_NAME} /home/$TOMCAT_USER/${CATALINA_BASE_NAME}-${date_}
+    elif [[  "$value" == "${SOURCE_DIR}" ]]
+    then
+      echo "${SOURCE_DIR} directory does already exist"
+      sudo mv /home/$TOMCAT_USER/${SOURCE_DIR} /home/$TOMCAT_USER/${SOURCE_DIR}-${date_}
+    else
+      echo "Go to installation"
+    fi
+  done
+ }
 
-########################### Create a tomcat User and Group ######################
-echo -e "\e[1;32;40m[1] Create a mysql User and Group \e[0m"
-# Check tomcat group
-GROUP=`cat /etc/group | grep $TOMCAT_USER | awk -F ':' '{print $1}'`
-if [[ $GROUP != $TOMCAT_USER ]];then
-  sudo groupadd $TOMCAT_USER
+# tomcat user make
+tomcat_user(){
+  cd /home/$TOMCAT_USER
+  sudo wget https://archive.apache.org/dist/tomcat/tomcat-8/v8.5.50/bin/${CATALINA_HOME_NAME}.tar.gz >& /dev/null
+  echo -en "\e[1;36;40m    Downloading.....\e[0m"
+  sudo tar xvfz ${CATALINA_HOME_NAME}.tar.gz 2>&1 | _extract
+  sudo cp -ar ${CATALINA_HOME_NAME} ${CATALINA_BASE_NAME}
+  sudo rm -f ${CATALINA_HOME_NAME}.tar.gz
+}
+
+# JDK install
+if ! rpm -qa | grep ${JDK} > /dev/null
+then
+  echo -e "\e[0;33;47m ${JDK} was not found. Install JDK \e[0m"
+  # sudo yum install -y ${JDK}
 else
-  echo -e "\e[1;33;40m [$TOMCAT_USER group already exits] \e[0m"
+  echo -e "\e[1;40m [${JDK} already installed] \e[0m"
+fi
+########################### Create a tomcat User and Group ######################
+echo -e "\e[1;32;40m[1] Create a Tomcat User and Group \e[0m"
+# Check tomcat group
+GROUP=$(cat /etc/group | grep ${TOMCAT_USER} | awk -F ':' '{print $1}')
+if [[ ${GROUP} != ${TOMCAT_USER} ]];then
+  sudo groupadd ${TOMCAT_USER}
+else
+  echo -e "\e[1;33;40m [${TOMCAT_USER} group already exist] \e[0m"
 fi
 # Check tomcat user
-ACCOUNT=`cat /etc/passwd | grep $MYSQL_USER | awk -F ':' '{print $1}'`
-if [[ $ACCOUNT != $MYSQL_USER ]];then
-  sudo useradd -g $TOMCAT_USER -s /usr/sbin/nologin/ $TOMCAT_USER
+ACCOUNT=$(cat /etc/passwd | grep ${TOMCAT_USER} | awk -F ':' '{print $1}')
+if [[ ${ACCOUNT} != ${TOMCAT_USER} ]];then
+  sudo useradd -g ${TOMCAT_USER} -s /usr/sbin/nologin/ ${TOMCAT_USER}
 else
-  echo -e "\e[1;33;40m [$TOMCAT_USER user already exits] \e[0m"
+  echo -e "\e[1;33;40m [${TOMCAT_USER} user already exist] \e[0m"
 fi
+sleep 1
+
+# if tomcat directory exist, backup tomcat directory and create tomcat directory
+if_exist
 
 ################################## Install tomcat8 #############################
-if [[ -d "/home/$TOMCAT_USER" ]];then
-cd /home/$TOMCAT_USER; \
-sudo wget https://archive.apache.org/dist/tomcat/tomcat-8/v8.5.38/bin/$CATALINA_HOME_NAME.tar.gz; \
- sudo tar xvfz "$CATALINA_HOME_NAME".tar.gz | _extrac; \
- sudo cp -ar "$CATALINA_HOME_NAME" "$CATALINA_BASE_NAME"; \
- sudo rm -f "$CATALINA_HOME_NAME".tar.gz
+echo -e "\e[1;32;40m[2] Install tomcat8 \e[0m"
+if [[ -d /home/${TOMCAT_USER} ]];then
+  echo "/home/${TOMCAT_USER} directory does exist."
+  sudo mv /home/${TOMCAT_USER} /home/${TOMCAT_USER}-${date_}
+  sudo mkdir -p /home/${TOMCAT_USER} && sudo chmod 0755 /home/${TOMCAT_USER}
+  tomcat_user
 else
-  echo -e "\e[0;31;47m /home/$TOMCAT_USER directory does not exits\e[0m"
-  exit 9
+  echo -e "\e[0;31;47m /home/${TOMCAT_USER} directory does not exist. Create ${TOMCAT_USER} directory\e[0m"
+  sudo mkdir -p /home/${TOMCAT_USER} && sudo chmod 0755 /home/${TOMCAT_USER}
+  tomcat_user
 fi
 
-# gclog 디렉토리 생성
-if [[ ! -d "/home/$TOMCAT_USER/$CATALINA_BASE_NAME/logs/gclog" ]];then
+sleep 1
+echo -e "\e[1;32;40m Create gc directory \e[0m"
+if [[ ! -d /home/$TOMCAT_USER/$CATALINA_BASE_NAME/logs/gclog ]];then
   sudo mkdir -p "/home/$TOMCAT_USER/$CATALINA_BASE_NAME/logs/gclog"
 else
-  echo -e "\e[0;31;47m /home/$TOMCAT_USER/$CATALINA_BASE_NAME/logs/gclog directory cannot create\e[0m"
-  exit 9
+  echo -e "\e[0;31;47m /home/$TOMCAT_USER/$CATALINA_BASE_NAME/logs/gclog directory does exist\e[0m"
 fi
 
 # server.xml 복사
+echo -e "\e[1;32;40m Copy server.xml \e[0m"
 sudo rm -f "/home/$TOMCAT_USER/$CATALINA_BASE_NAME/conf/server.xml"
 sudo wget -P \
-  "/home/$TOMCAT_USER/$CATALINA_BASE_NAME/conf" https://raw.githubusercontent.com/sohwaje/auto_install_tomcat8/master/server.xml
-
+  "/home/$TOMCAT_USER/$CATALINA_BASE_NAME/conf" https://raw.githubusercontent.com/sohwaje/auto_install_tomcat8/master/server.xml -q & >& /dev/null
 # tomcat database 설정
-sudo mkdir -p "/home/$TOMCAT_USER/$SOURCE_DIR/$CATALINA_BASE_NAME"; \
- sudo mkdir -p "/home/$TOMCAT_USER/$CATALINA_BASE_NAME/conf/Catalina/localhost"; \
+if [[ ! -d /home/$TOMCAT_USER/${CATALINA_BASE_NAME}/conf/Catalina/localhost ]];then
+  sudo mkdir -p "/home/$TOMCAT_USER/$SOURCE_DIR/$CATALINA_BASE_NAME"
+  sudo mkdir -p "/home/$TOMCAT_USER/$CATALINA_BASE_NAME/conf/Catalina/localhost";
+else
+  echo -e "\e[0;31;47m /home/$TOMCAT_USER/$SOURCE_DIR/$CATALINA_BASE_NAME directory does exist\e[0m"
+fi
+
+# database 설정
+echo -e "\e[1;32;40m[1] Set DB \e[0m"
 echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
   <!-- 1. 소스 경로 -->
 <Context path=\"\" docBase="\"/home/$TOMCAT_USER"/"$SOURCE_DIR"/"$CATALINA_BASE_NAME"\" reloadable=\"false\"
          privileged=\"true\" antiResourceLocking=\"false\" antiJARLocking=\"false\">
 <!-- 2. DB 정보 -->
-    <Resource name=\"jdbc/elLetterMDS\" auth=\"Container\"
+    <Resource name=\"jdbc/tomcat8MDS\" auth=\"Container\"
               type=\"javax.sql.DataSource\"
               driverClassName=\"com.mysql.jdbc.Driver\"
               validationQuery=\"SELECT 1\"
               validationInterval=\"30000\"
-              url=\"jdbc:mysql://10.1.3.4:3306/hiclass_stage_db?useUnicode=true&amp;characterEncoding=UTF-8&amp;characterSetResults=UTF-8&amp;useSSL=true&amp;serverTimezone=Asia/Seoul\"
-              username=\"class_user_stage\"
-              password=\"class@1904\"
+              url=\"jdbc:mysql://localhost:3306/tomcat8?useUnicode=true&amp;characterEncoding=UTF-8&amp;characterSetResults=UTF-8&amp;useSSL=true&amp;serverTimezone=Asia/Seoul\"
+              username=\"tomcat\"
+              password=\"tlrhdaleldj!@#\"
               maxActive=\"100\" maxIdle=\"50\" initialSize=\"30\" maxWait=\"-1\"/>
-</Context>" | sudo tee -a "/home/$TOMCAT_USER/$CATALINA_BASE_NAME/conf/Catalina/localhost/ROOT.xml"
+</Context>" | sudo tee -a "/home/$TOMCAT_USER/$CATALINA_BASE_NAME/conf/Catalina/localhost/ROOT.xml" > /dev/null
 
 # mysql-connector 복사
-sudo curl -L "https://github.com/sohwaje/ncloud_terraform/blob/master/mysql-connector-java-8.0.21.jar?raw=true" -o "/home/$TOMCAT_USER/$CATALINA_HOME_NAME/lib/mysql-connector-java-8.0.21.jar"
-
+if [[ ! -f /home/$TOMCAT_USER/$CATALINA_HOME_NAME/lib/mysql-connector-java ]];then
+sudo curl -L "https://github.com/sohwaje/auto_install_tomcat8/raw/master/mysql-connector-java-8.0.21.jar?raw=true" -o "/home/$TOMCAT_USER/$CATALINA_HOME_NAME/lib/mysql-connector-java-8.0.21.jar"
+else
+  echo -e "\e[0;31;47m mysql-connector-java already exist \e[0m"
+fi
 
 # 톰캣 환경 변수 설정
 sudo bash -c "echo 'export CATALINA_BASE=/home/$TOMCAT_USER/$CATALINA_BASE_NAME' >> /home/$TOMCAT_USER/$CATALINA_BASE_NAME/bin/setenv.sh"
@@ -115,7 +165,7 @@ export JAVA_OPTS="$JAVA_OPTS -DmaxKeepAliveRequests=-1"
 export JAVA_OPTS="$JAVA_OPTS -DconnectionTimeout=30000"
 
 #[4] Directory Setup #####
-export SERVER_NAME=gneerbank
+export SERVER_NAME="gneerbank"
 export JAVA_OPTS="$JAVA_OPTS -Dserver=gneerbank"
 export JAVA_HOME="/etc/alternatives/jre_1.8.0_openjdk"
 export LOG_HOME=$CATALINA_BASE/logs
@@ -126,13 +176,13 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CATALINA_HOME/lib
 export JAVA_OPTS="$JAVA_OPTS -Xms4096m"
 export JAVA_OPTS="$JAVA_OPTS -Xmx4096m"
 export JAVA_OPTS="$JAVA_OPTS -XX:MetaspaceSize=256m -XX:MaxMetaspaceSize=256m"
-export JAVA_OPTS="$JAVA_OPTS -Xss512k"
 
 #[6] G1 GC OPTIONS ###
-export JAVA_OPTS="$JAVA_OPTS -XX:+UseG1GC "
+export JAVA_OPTS="$JAVA_OPTS -XX:+UseG1GC"
 export JAVA_OPTS="$JAVA_OPTS -Dfile.encoding=\"utf-8\""
-export JAVA_OPTS="JAVA_OPTS -XX:+UnlockDiagnosticVMOptions"
-export JAVA_OPTS="JAVA_OPTS -XX:+InitiatingHeapOccupancyPercent=35"
+export JAVA_OPTS="$JAVA_OPTS -XX:+UnlockDiagnosticVMOptions"
+export JAVA_OPTS="$JAVA_OPTS -XX:+G1SummarizeConcMark"
+export JAVA_OPTS="$JAVA_OPTS -XX:InitiatingHeapOccupancyPercent=45"
 
 #[7] JVM Option GCi log, Stack Trace, Dump
 export JAVA_OPTS="$JAVA_OPTS -verbose:gc"
@@ -161,7 +211,7 @@ echo "SSL_PORT=$SSL_PORT"
 echo "AJP_PORT=$AJP_PORT"
 echo "SHUTDOWN_PORT=$SHUTDOWN_PORT"
 echo "================================================"
-''' | sudo tee -a "/home/$TOMCAT_USER/$CATALINA_BASE_NAME/bin/setenv.sh"
+''' | sudo tee -a "/home/$TOMCAT_USER/$CATALINA_BASE_NAME/bin/setenv.sh" > /dev/null
 sudo chmod +x "/home/$TOMCAT_USER/$CATALINA_BASE_NAME/bin/setenv.sh"
 
 # Change permission tomcat Directory
@@ -170,7 +220,7 @@ sudo chown -R $TOMCAT_USER:$TOMCAT_USER /home/$TOMCAT_USER
 # add systemctl tomcat service
 sudo bash -c "cat << EOF > /etc/systemd/system/tomcat.service
 [Unit]
-Description=tomcat7
+Description=tomcat8
 After=network.target syslog.target
 
 [Service]
