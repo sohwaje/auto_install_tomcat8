@@ -73,7 +73,8 @@ else
 fi
 sleep 1
 
-sudo chmod 755 /home/${TOMCAT_USER} 
+sudo chmod 755 /home/${TOMCAT_USER}
+sudo mkdir /home/$TOMCAT_USER/$SOURCE_DIR
 # if tomcat directory exist, backup tomcat directory and create tomcat directory
 declare -a DIR
 DIR=( "${CATALINA_BASE_NAME}" "${SOURCE_DIR}" "${CATALINA_HOME_NAME}" )
@@ -89,7 +90,7 @@ if [[ -d /home/${TOMCAT_USER} ]];then
   tomcat_user
 else
   echo -e "\e[0;31;47m /home/${TOMCAT_USER} directory does not exist. Create ${TOMCAT_USER} directory\e[0m"
-  sudo mkdir -p /home/${TOMCAT_USER} && sudo chmod 0755 /home/${TOMCAT_USER}
+  sudo mkdir -p /home/${TOMCAT_USER}
   tomcat_user
 fi
 
