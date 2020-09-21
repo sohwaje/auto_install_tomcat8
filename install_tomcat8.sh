@@ -49,7 +49,8 @@ if_exist()
 }
 
 ############################## tomcat user make ################################
-tomcat_user(){
+tomcat_user()
+{
   cd /home/$TOMCAT_USER
   sudo wget https://archive.apache.org/dist/tomcat/tomcat-8/v8.5.50/bin/${CATALINA_HOME_NAME}.tar.gz >& /dev/null
   echo -en "\e[1;36;40m    Downloading.....\e[0m"
