@@ -25,45 +25,33 @@ _extract()
 }
 
 ################ if tomcat directory exist, backup tomcat directory ############
-if_exist()
+if_tomcat_dir()
 {
   local list_=($(ls /home/$TOMCAT_USER))
-  for value in "${list_[@]}"
-  do
-    if [[ "$value" == "${CATALINA_HOME_NAME}" ]]
-    then
-      echo "${CATALINA_HOME_NAME} directory does already exist"
-      sudo mv /home/$TOMCAT_USER/${CATALINA_HOME_NAME} /home/$TOMCAT_USER/${CATALINA_HOME_NAME}-${date_}
-    elif [[ "$value" == "${CATALINA_BASE_NAME}" ]]
-    then
-      echo "${CATALINA_BASE_NAME} directory does already exist"
-      sudo mv /home/$TOMCAT_USER/${CATALINA_BASE_NAME} /home/$TOMCAT_USER/${CATALINA_BASE_NAME}-${date_}
-    elif [[  "$value" == "${SOURCE_DIR}" ]]
-    then
-      echo "${SOURCE_DIR} directory does already exist"
-      sudo mv /home/$TOMCAT_USER/${SOURCE_DIR} /home/$TOMCAT_USER/${SOURCE_DIR}-${date_}
-    else
-      echo "Go to installation"
-    fi
-  done
+  if [[ "${list_[@]}" =~ "$1" ]];then # "=~ 문자열 비교"
+    echo "$1 directory does already exist. Backup $1"
+    sudo mv /home/$TOMCAT_USER/$1 /home/$TOMCAT_USER/${1}-$date_
+    # sudo mkdir -p /home/$TOMCAT_USER/$1
+  else
+    echo "$1 directory does not exist. Continue working"
+  fi
 }
 
-############################## tomcat user make ################################
+############################## tomcat 엔진, 인스턴스 설치 ###########################
 tomcat_user()
 {
   cd /home/$TOMCAT_USER
   sudo wget https://archive.apache.org/dist/tomcat/tomcat-8/v8.5.50/bin/${CATALINA_HOME_NAME}.tar.gz >& /dev/null
   echo -en "\e[1;36;40m    Downloading.....\e[0m"
   sudo tar xvfz ${CATALINA_HOME_NAME}.tar.gz 2>&1 | _extract
-  sudo cp -ar ${CATALINA_HOME_NAME} ${CATALINA_BASE_NAME}
-  sudo rm -f ${CATALINA_HOME_NAME}.tar.gz
+  sudo cp -ar ${CATALINA_HOME_NAME} ${CATALINA_BASE_NAME} && sudo rm -f ${CATALINA_HOME_NAME}.tar.gz
 }
 
-# JDK install
+################################ JDK install ###################################
 if ! rpm -qa | grep ${JDK} > /dev/null
 then
   echo -e "\e[0;33;47m ${JDK} was not found. Install JDK \e[0m"
-  # sudo yum install -y ${JDK}
+  sudo yum install -y ${JDK}
 else
   echo -e "\e[1;40m [${JDK} already installed] \e[0m"
 fi
@@ -86,14 +74,17 @@ fi
 sleep 1
 
 # if tomcat directory exist, backup tomcat directory and create tomcat directory
-if_exist
+declare -a DIR
+DIR=( "${CATALINA_BASE_NAME}" "${SOURCE_DIR}" "${CATALINA_HOME_NAME}" )
+for i in "${DIR[@]}"
+do
+  if_tomcat_dir $i
+done
 
 ################################## Install tomcat8 #############################
 echo -e "\e[1;32;40m[2] Install tomcat8 \e[0m"
 if [[ -d /home/${TOMCAT_USER} ]];then
   echo "/home/${TOMCAT_USER} directory does exist."
-  sudo mv /home/${TOMCAT_USER} /home/${TOMCAT_USER}-${date_}
-  sudo mkdir -p /home/${TOMCAT_USER} && sudo chmod 0755 /home/${TOMCAT_USER}
   tomcat_user
 else
   echo -e "\e[0;31;47m /home/${TOMCAT_USER} directory does not exist. Create ${TOMCAT_USER} directory\e[0m"
@@ -114,16 +105,17 @@ echo -e "\e[1;32;40m Copy server.xml \e[0m"
 sudo rm -f "/home/$TOMCAT_USER/$CATALINA_BASE_NAME/conf/server.xml"
 sudo wget -P \
   "/home/$TOMCAT_USER/$CATALINA_BASE_NAME/conf" ${server_xml} -q & >& /dev/null
-# tomcat database 설정
+########################### /conf/Catalina/localhost ###########################
 if [[ ! -d /home/$TOMCAT_USER/${CATALINA_BASE_NAME}/conf/Catalina/localhost ]];then
-  sudo mkdir -p "/home/$TOMCAT_USER/$SOURCE_DIR/$CATALINA_BASE_NAME"
   sudo mkdir -p "/home/$TOMCAT_USER/$CATALINA_BASE_NAME/conf/Catalina/localhost";
 else
-  echo -e "\e[0;31;47m /home/$TOMCAT_USER/$SOURCE_DIR/$CATALINA_BASE_NAME directory does exist\e[0m"
+  echo -e "\e[0;31;47m /home/$TOMCAT_USER/$SOURCE_DIR/$CATALINA_BASE_NAME directory does exist. Bacup and recreate \e[0m"
+  sudo mv "/home/$TOMCAT_USER/$CATALINA_BASE_NAME/conf/Catalina/localhost" \
+  "/home/$TOMCAT_USER/$CATALINA_BASE_NAME/conf/Catalina/localhost-$date_"
 fi
 
-# database 설정
-echo -e "\e[1;32;40m[1] Set DB \e[0m"
+#######################/conf/Catalina/localhost/ROOT.xml########################
+echo -e "\e[1;32;40m[3] Set DB \e[0m"
 echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
   <!-- 1. 소스 경로 -->
 <Context path=\"\" docBase="\"/home/$TOMCAT_USER"/"$SOURCE_DIR"/"$CATALINA_BASE_NAME"\" reloadable=\"false\"
@@ -140,9 +132,10 @@ echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
               maxActive=\"100\" maxIdle=\"50\" initialSize=\"30\" maxWait=\"-1\"/>
 </Context>" | sudo tee -a "/home/$TOMCAT_USER/$CATALINA_BASE_NAME/conf/Catalina/localhost/ROOT.xml" > /dev/null
 
-# mysql-connector 복사
+########################## Copy mysql-connector-java ###########################
 if [[ ! -f /home/$TOMCAT_USER/$CATALINA_HOME_NAME/lib/mysql-connector-java ]];then
-sudo curl -L "https://github.com/sohwaje/auto_install_tomcat8/raw/master/mysql-connector-java-8.0.21.jar?raw=true" -o "/home/$TOMCAT_USER/$CATALINA_HOME_NAME/lib/mysql-connector-java-8.0.21.jar"
+sudo curl -L "https://github.com/sohwaje/auto_install_tomcat8/raw/master/mysql-connector-java-8.0.21.jar?raw=true" \
+-o "/home/$TOMCAT_USER/$CATALINA_HOME_NAME/lib/mysql-connector-java-8.0.21.jar"
 else
   echo -e "\e[0;31;47m mysql-connector-java already exist \e[0m"
 fi
@@ -239,5 +232,10 @@ EOF"
 # Create test index.jsp
 echo "TEST PAGE-$HOSTNAME" | sudo tee -a "/home/$TOMCAT_USER/$SOURCE_DIR/$CATALINA_BASE_NAME/index.jsp"
 
-# tomcat start
-sudo systemctl daemon-reload && sudo systemctl start tomcat && sudo systemctl enable tomcat
+################################ tomcat start ##################################
+start_tomcat()
+{
+  sudo systemctl daemon-reload && sudo systemctl start tomcat && sudo systemctl enable tomcat
+}
+
+start_tomcat
