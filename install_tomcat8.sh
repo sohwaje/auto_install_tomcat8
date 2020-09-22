@@ -13,6 +13,36 @@ TOMCAT_USER="sigongweb"
 JDK="java-1.8.0-openjdk"
 date_=$(date "+%Y%m%d%H%M%S")
 server_xml="https://raw.githubusercontent.com/sohwaje/auto_install_tomcat8/master/server.xml"
+########################### Check user and group ###############################
+ok_fail()
+{
+  if [[ $? -eq 0 ]];then
+    echo "[OK]"
+  else
+    echo -e "\e[0;31;47m [Failed] \e[0m"
+  fi
+}
+
+check_group()
+{
+  if getent group "$1" >/dev/null 2>&1; then
+    echo -e "\e[1;33;40m =====> [TOMCAT group already exist] \e[0m"
+  else
+    echo -e "\e[1;33;40m =====> [Create TOMCAT group] \e[0m"
+    sudo groupadd $1
+  fi
+}
+
+check_user()
+{
+  if getent passwd "$1" >/dev/null 2>&1; then
+    echo -e "\e[1;33;40m =====> [TOMCAT user already exist] \e[0m"
+  else
+    echo -e "\e[1;33;40m =====> [Create TOMCAT user] \e[0m"
+    sudo useradd -g $1 -s /usr/sbin/nologin/ $1
+    sudo chmod 755 /home/$1
+  fi
+}
 ############################## compress indicator ##############################
 # usage: tar xvfz *.tar.gz | _extract
 _extract()
@@ -20,11 +50,11 @@ _extract()
   while read -r line; do
     x=$((x+1))
     echo -en "\e[1;36;40m [$x] extracted\r \e[0m"
-    clear
+    # sleep 0.1
   done
-  echo -e "\e[1;33;40m Successfully extracted \e[0m"
+  echo -e "\e[1;33;40m=====> Successfully extracted \e[0m"
 }
-
+################################### Check JDK ##################################
 _jdk()
 {
   if ! rpm -qa | grep $1 > /dev/null
@@ -32,7 +62,7 @@ _jdk()
     echo -e "\e[0;33;47m $1 was not found. Install JDK \e[0m"
     sudo yum install -y $1
   else
-    echo -e "\e[1;40m [$1 already installed] \e[0m"
+    echo -e "\e[1;33;40m [$1 already installed] \e[0m"
   fi
 }
 ################ if tomcat directory exist, backup tomcat directory ############
@@ -44,23 +74,24 @@ if_tomcat_dir()
     for value in "${list_[@]}"
     do
       if [[ $value == $1 ]];then
-        echo -e "\e[1;33;4;44m $1 directory does already exist. Backup $1\e[0m"
         sudo mv /home/$TOMCAT_USER/$1 /home/$TOMCAT_USER/${1}-$date_
-        break
-      else
-        echo -e "\e[1;34m$1 directory does not exist. Continue working\e[0m"
-        break
+        echo -e "\e[1;34m $1 directory does already exist.  =====> Backup $1\e[0m"
+        # break
+      # else
+      #   echo -e "\e[1;34m =====> $1 directory does not exist.\e[0m"
+        # break
       fi
     done
+# echo "END. Continue working"
   fi
 }
-
 ############################ tomcat 엔진, 인스턴스 설치 ##########################
 tomcat_user()
 {
   cd /home/$TOMCAT_USER
   sudo wget https://archive.apache.org/dist/tomcat/tomcat-8/v8.5.50/bin/${CATALINA_HOME_NAME}.tar.gz >& /dev/null
-  echo -en "\e[1;36;40m    Downloading.....\e[0m"
+  echo -e "\e[1;32;40m Downloading and Extract \e[0m"
+  sleep 1
   sudo tar xvfz ${CATALINA_HOME_NAME}.tar.gz 2>&1 | _extract
   sudo cp -ar ${CATALINA_HOME_NAME} ${CATALINA_BASE_NAME} && sudo rm -f ${CATALINA_HOME_NAME}.tar.gz
   sudo mkdir -p /home/$TOMCAT_USER/${SOURCE_DIR}/${CATALINA_BASE_NAME}
@@ -83,25 +114,12 @@ done
 _jdk ${JDK}
 ########################## Create a tomcat User and Group ######################
 echo -e "\e[1;32;40m[2] Create a Tomcat User and Group \e[0m"
-# Check tomcat group
-GROUP=$(cat /etc/group | grep ${TOMCAT_USER} | awk -F ':' '{print $1}')
-if [[ ${GROUP} != ${TOMCAT_USER} ]];then
-  sudo groupadd ${TOMCAT_USER}
-else
-  echo -e "\e[1;33;40m [TOMCAT group already exist] \e[0m"
-fi
-# Check tomcat user
-ACCOUNT=$(cat /etc/passwd | grep ${TOMCAT_USER} | awk -F ':' '{print $1}')
-if [[ ${ACCOUNT} != ${TOMCAT_USER} ]];then
-  sudo useradd -g ${TOMCAT_USER} -s /usr/sbin/nologin/ ${TOMCAT_USER}
-  sudo chmod 755 /home/${TOMCAT_USER}
-else
-  echo -e "\e[1;33;40m [TOMCAT user already exist] \e[0m"
-fi
+check_group ${TOMCAT_USER}
+check_user ${TOMCAT_USER}
 ########################### Create Tomcat_user dir #############################
 echo -e "\e[1;32;40m[3] Create Tomcat_user dir \e[0m"
 if [[ -d /home/${TOMCAT_USER} ]];then
-  echo "/home/${TOMCAT_USER} directory does exist."
+  echo -e "\e[1;34m /home/${TOMCAT_USER} directory does exist. \e[0m"
   tomcat_user
 else
   echo -e "\e[0;31;47m /home/${TOMCAT_USER} directory does not exist. Create ${TOMCAT_USER} directory\e[0m"
@@ -114,13 +132,13 @@ if [[ ! -f /home/$TOMCAT_USER/$CATALINA_HOME_NAME/lib/mysql-connector-java ]];th
 sudo curl -Ls "https://github.com/sohwaje/auto_install_tomcat8/raw/master/mysql-connector-java-8.0.21.jar?raw=true" \
 -o "/home/$TOMCAT_USER/$CATALINA_HOME_NAME/lib/mysql-connector-java-8.0.21.jar"
 else
-  echo -e "\e[0;31;47m mysql-connector-java already exist \e[0m"
+  echo -e "\e[0;31;47m =====> mysql-connector-java already exist \e[0m"
 fi
 # Copy server.xml in /home/$TOMCAT_USER/$CATALINA_BASE_NAME/conf/
 echo -e "\e[1;32;40m[5] Copy server.xml \e[0m"
 sudo rm -f "/home/$TOMCAT_USER/$CATALINA_BASE_NAME/conf/server.xml"
 sudo wget -P \
-  "/home/$TOMCAT_USER/$CATALINA_BASE_NAME/conf" ${server_xml} -q & >& /dev/null
+  "/home/$TOMCAT_USER/$CATALINA_BASE_NAME/conf" ${server_xml} -q & >& /dev/null | ok_fail
 #######################/conf/Catalina/localhost/ROOT.xml########################
 echo -e "\e[1;32;40m[6] Set DB \e[0m"
 echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
@@ -137,8 +155,7 @@ echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
               username=\"tomcat\"
               password=\"tlrhdaleldj!@#\"
               maxActive=\"100\" maxIdle=\"50\" initialSize=\"30\" maxWait=\"-1\"/>
-</Context>" | sudo tee -a "/home/$TOMCAT_USER/$CATALINA_BASE_NAME/conf/Catalina/localhost/ROOT.xml" > /dev/null
-
+</Context>" | sudo tee -a "/home/$TOMCAT_USER/$CATALINA_BASE_NAME/conf/Catalina/localhost/ROOT.xml" > /dev/null | ok_fail
 # 톰캣 환경 변수 설정
 echo -e "\e[1;32;40m[7] Set variables \e[0m"
 sudo bash -c "echo 'export CATALINA_BASE=/home/$TOMCAT_USER/$CATALINA_BASE_NAME' >> /home/$TOMCAT_USER/$CATALINA_BASE_NAME/bin/setenv.sh"
@@ -206,7 +223,7 @@ echo "SSL_PORT=$SSL_PORT"
 echo "AJP_PORT=$AJP_PORT"
 echo "SHUTDOWN_PORT=$SHUTDOWN_PORT"
 echo "================================================"
-''' | sudo tee -a "/home/$TOMCAT_USER/$CATALINA_BASE_NAME/bin/setenv.sh" > /dev/null
+''' | sudo tee -a "/home/$TOMCAT_USER/$CATALINA_BASE_NAME/bin/setenv.sh" > /dev/null | ok_fail
 sudo chmod +x "/home/$TOMCAT_USER/$CATALINA_BASE_NAME/bin/setenv.sh"
 
 # Change permission tomcat Directory
@@ -228,9 +245,10 @@ ExecStop=/home/$TOMCAT_USER/$CATALINA_BASE_NAME/bin/shutdown.sh
 
 [Install]
 WantedBy=multi-user.target
-EOF"
+EOF" | ok_fail
 # Create test index.jsp
 echo -e "\e[1;32;40m[9] Create test index.jsp \e[0m"
-echo "TEST PAGE-$HOSTNAME" | sudo tee -a "/home/$TOMCAT_USER/$SOURCE_DIR/$CATALINA_BASE_NAME/index.jsp"
+echo "TEST PAGE-$HOSTNAME" | sudo tee -a "/home/$TOMCAT_USER/$SOURCE_DIR/$CATALINA_BASE_NAME/index.jsp" | ok_fail
 
-start_tomcat
+echo -e "\e[1;32;40m[10] Tomcat start.....\e[0m"
+start_tomcat | ok_fail
