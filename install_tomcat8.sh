@@ -44,11 +44,11 @@ if_tomcat_dir()
     for value in "${list_[@]}"
     do
       if [[ $value == $1 ]];then
-        echo "$1 directory does already exist. Backup $1"
+        echo -e "\e[1;33;4;44m $1 directory does already exist. Backup $1\e[0m"
         sudo mv /home/$TOMCAT_USER/$1 /home/$TOMCAT_USER/${1}-$date_
         break
       else
-        echo "$1 directory does not exist. Continue working"
+        echo -e "\e[1;34m$1 directory does not exist. Continue working\e[0m"
         break
       fi
     done
