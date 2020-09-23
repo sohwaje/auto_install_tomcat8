@@ -22,7 +22,6 @@ ok_fail()
     echo -e "\e[0;31;47m [Failed] \e[0m"
   fi
 }
-
 check_group()
 {
   if getent group "$1" >/dev/null 2>&1; then
@@ -32,7 +31,6 @@ check_group()
     sudo groupadd $1
   fi
 }
-
 check_user()
 {
   if getent passwd "$1" >/dev/null 2>&1; then
@@ -50,7 +48,7 @@ _extract()
   while read -r line; do
     x=$((x+1))
     echo -en "\e[1;36;40m [$x] extracted\r \e[0m"
-    # sleep 0.1
+    sleep 0.05
   done
   echo -e "\e[1;33;40m=====> Successfully extracted \e[0m"
 }
@@ -75,14 +73,9 @@ if_tomcat_dir()
     do
       if [[ $value == $1 ]];then
         sudo mv /home/$TOMCAT_USER/$1 /home/$TOMCAT_USER/${1}-$date_
-        echo -e "\e[1;34m $1 directory does already exist.  =====> Backup $1\e[0m"
-        # break
-      else
-        echo -e "\e[1;34m =====> $1 directory does not exist.\e[0m"
-        # break
+        echo -e "\e[1;33;40m $1 directory does already exist.     =====> Backup $1\e[0m"
       fi
     done
-# echo "END. Continue working"
   fi
 }
 ############################ tomcat 엔진, 인스턴스 설치 ##########################
@@ -104,22 +97,27 @@ start_tomcat()
   sudo systemctl daemon-reload && sudo systemctl start tomcat && sudo systemctl enable tomcat
 }
 ########################## Create a tomcat User and Group ######################
-echo -e "\e[1;32;40m[2] Create a Tomcat User and Group \e[0m"
+echo -e "\e[1;32;40m[1] Create a Tomcat User and Group \e[0m"
 check_group ${TOMCAT_USER}
 check_user ${TOMCAT_USER}
 ################################ if_tomcat_dir() ###############################
-echo -e "\e[1;32;40m[1] if tomcat directory exist, backup tomcat directory \e[0m"
+echo -e "\e[1;32;40m[2] If tomcat directory exist, backup and recreate tomcat directory \e[0m"
 DIR=( "${CATALINA_BASE_NAME}" "${SOURCE_DIR}" "${CATALINA_HOME_NAME}" )
 for i in "${DIR[@]}"
 do
   if_tomcat_dir $i
 done
+echo ""
+echo -e "\e[1;33;40m  Completing the Task.  =====> Continue working.\e[0m"
+echo ""
+sleep 1
 ################################ JDK8 install ##################################
+echo -e "\e[1;32;40m[2] Check JDK \e[0m"
 _jdk ${JDK}
 ########################### Create Tomcat_user dir #############################
 echo -e "\e[1;32;40m[3] Create Tomcat_user dir \e[0m"
 if [[ -d /home/${TOMCAT_USER} ]];then
-  echo -e "\e[1;34m /home/${TOMCAT_USER} directory does exist. \e[0m"
+  echo -e "\e[1;33;40m /home/${TOMCAT_USER} directory already exist. \e[0m"
   tomcat_user
 else
   echo -e "\e[0;31;47m /home/${TOMCAT_USER} directory does not exist. Create ${TOMCAT_USER} directory\e[0m"
@@ -127,7 +125,7 @@ else
   tomcat_user
 fi
 ########################## Copy mysql-connector-java ###########################
-echo -e "\e[1;32;40m[4] mysql-connector-java \e[0m"
+echo -e "\e[1;32;40m[4] Download mysql-connector-java \e[0m"
 if [[ ! -f /home/$TOMCAT_USER/$CATALINA_HOME_NAME/lib/mysql-connector-java ]];then
 sudo curl -Ls "https://github.com/sohwaje/auto_install_tomcat8/raw/master/mysql-connector-java-8.0.21.jar?raw=true" \
 -o "/home/$TOMCAT_USER/$CATALINA_HOME_NAME/lib/mysql-connector-java-8.0.21.jar"
@@ -247,8 +245,8 @@ ExecStop=/home/$TOMCAT_USER/$CATALINA_BASE_NAME/bin/shutdown.sh
 WantedBy=multi-user.target
 EOF" | ok_fail
 # Create test index.jsp
-echo -e "\e[1;32;40m[9] Create test index.jsp \e[0m"
-echo "TEST PAGE-$HOSTNAME" | sudo tee -a "/home/$TOMCAT_USER/$SOURCE_DIR/$CATALINA_BASE_NAME/index.jsp" | ok_fail
+# echo -e "\e[1;32;40m[9] Create test index.jsp \e[0m"
+echo "TEST PAGE-$HOSTNAME" | sudo tee -a "/home/$TOMCAT_USER/$SOURCE_DIR/$CATALINA_BASE_NAME/index.jsp" > /dev/null
 
-echo -e "\e[1;32;40m[10] Tomcat start.....\e[0m"
+echo -e "\e[1;32;40m[9] Tomcat start.....\e[0m"
 start_tomcat | ok_fail
