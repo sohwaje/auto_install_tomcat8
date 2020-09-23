@@ -77,8 +77,8 @@ if_tomcat_dir()
         sudo mv /home/$TOMCAT_USER/$1 /home/$TOMCAT_USER/${1}-$date_
         echo -e "\e[1;34m $1 directory does already exist.  =====> Backup $1\e[0m"
         # break
-      # else
-      #   echo -e "\e[1;34m =====> $1 directory does not exist.\e[0m"
+      else
+        echo -e "\e[1;34m =====> $1 directory does not exist.\e[0m"
         # break
       fi
     done
@@ -103,6 +103,10 @@ start_tomcat()
 {
   sudo systemctl daemon-reload && sudo systemctl start tomcat && sudo systemctl enable tomcat
 }
+########################## Create a tomcat User and Group ######################
+echo -e "\e[1;32;40m[2] Create a Tomcat User and Group \e[0m"
+check_group ${TOMCAT_USER}
+check_user ${TOMCAT_USER}
 ################################ if_tomcat_dir() ###############################
 echo -e "\e[1;32;40m[1] if tomcat directory exist, backup tomcat directory \e[0m"
 DIR=( "${CATALINA_BASE_NAME}" "${SOURCE_DIR}" "${CATALINA_HOME_NAME}" )
@@ -112,10 +116,6 @@ do
 done
 ################################ JDK8 install ##################################
 _jdk ${JDK}
-########################## Create a tomcat User and Group ######################
-echo -e "\e[1;32;40m[2] Create a Tomcat User and Group \e[0m"
-check_group ${TOMCAT_USER}
-check_user ${TOMCAT_USER}
 ########################### Create Tomcat_user dir #############################
 echo -e "\e[1;32;40m[3] Create Tomcat_user dir \e[0m"
 if [[ -d /home/${TOMCAT_USER} ]];then
