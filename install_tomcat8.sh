@@ -14,6 +14,16 @@ JDK="java-1.8.0-openjdk"
 date_=$(date "+%Y%m%d%H%M%S")
 server_xml="https://raw.githubusercontent.com/sohwaje/auto_install_tomcat8/master/server.xml"
 ########################### Check user and group ###############################
+install_success_fail()
+{
+  if [[ -z `sudo cat /home/$TOMCAT_USER/${CATALINA_BASE_NAME}/logs/catalina.out | grep -E "SQLException|failure"` ]];then
+    echo -e "\e[1;33;40m [Installed] \e[0m"
+  else
+    echo -e "\e[1;31;40m [Failed] \e[0m"
+    exit 9
+  fi
+}
+
 ok_fail()
 {
   if [[ $? -eq 0 ]];then
@@ -94,7 +104,7 @@ tomcat_user()
 ################################ tomcat start ##################################
 start_tomcat()
 {
-  sudo systemctl daemon-reload && sudo systemctl start tomcat && sudo systemctl enable tomcat
+  sudo systemctl daemon-reload && sudo systemctl start tomcat && sudo systemctl enable tomcat || echo -e "\e[0;31;47m [Failed] \e[0m"
 }
 ########################## Create a tomcat User and Group ######################
 echo -e "\e[1;32;40m[1] Create a Tomcat User and Group \e[0m"
@@ -249,4 +259,6 @@ EOF" | ok_fail
 echo "TEST PAGE-$HOSTNAME" | sudo tee -a "/home/$TOMCAT_USER/$SOURCE_DIR/$CATALINA_BASE_NAME/index.jsp" > /dev/null
 
 echo -e "\e[1;32;40m[9] Tomcat start.....\e[0m"
-start_tomcat | ok_fail
+start_tomcat
+sleep 3
+install_success_fail
