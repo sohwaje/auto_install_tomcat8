@@ -40,7 +40,7 @@ function blue {
 install_success_fail()
 {
   if [[ -z `sudo cat /home/$TOMCAT_USER/${CATALINA_BASE_NAME}/logs/catalina.out | grep -E "SQLException|failure"` ]];then
-    green "[Installed]"
+    blue "[Installed]"
   else
     red "[Failed]"
     exit 9
@@ -99,10 +99,10 @@ _jdk()
 ################ if tomcat directory exist, backup tomcat directory ############
 if_tomcat_dir()
 {
-  local list_=($(ls /home/$TOMCAT_USER))
-  if [[ "${list_[@]}" =~ "$1" ]];then
+  local candidates=($(ls /home/$TOMCAT_USER))
+  if [[ "${candidates[@]}" =~ "$1" ]];then
     blue "=======> Check if a directory exists $1"
-    for value in "${list_[@]}"
+    for value in "${candidates_[@]}"
     do
       if [[ $value == $1 ]];then
         sudo mv /home/$TOMCAT_USER/$1 /home/$TOMCAT_USER/${1}-$date_
