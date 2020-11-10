@@ -23,4 +23,4 @@ chmod +x install_tomcat8.sh
 - 그 밖에 JVM 옵션, JAVA 옵션을 설정할 수 있음.
 
 ## [3] 설치 화면
-![alt text](../readme-img/install.JPG)
+![alt text](/readme-img/install.JPG)
