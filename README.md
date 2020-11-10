@@ -1,4 +1,5 @@
 # Tomcat8 자동 설치
+- 쉘스크립트 파일 하나에 모든 설정이 다 들어가 있습니다.
 
 ## [1] 사용 방법
 ```
@@ -16,7 +17,7 @@ chmod +x install_tomcat8.sh
 - CATALINA_BASE_NAME=""
 
 ### server.xml
-- 각 서비스 포트를 변수처리하였음.
+- 각 서비스 포트는 변수처리되어 있으므로 setenv.sh에서 변경할 수 있음.
 
 ### setenv.sh
 - server.xml에서 변수처리 된 포트를 지정할 수 있음.
