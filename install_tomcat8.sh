@@ -7,9 +7,9 @@
 # Tomcat configuration
 ## 변수 설정
 SOURCE_DIR="webapps"
-CATALINA_HOME_NAME="apache-tomcat-8.5.50" # engine home dir
-CATALINA_BASE_NAME="instance01" # instance home dir
 TOMCAT_USER="azureuser"
+CATALINA_BASE_NAME="instance01" # instance home dir
+CATALINA_HOME_NAME="apache-tomcat-8.5.50" # engine home dir
 JDK="java-1.8.0-openjdk"
 date_=$(date "+%Y%m%d%H%M%S")
 server_xml="https://raw.githubusercontent.com/sohwaje/auto_install_tomcat8/master/server.xml"
